@@ -227,3 +227,17 @@ body {
   padding: 4px 6px;
   text-align: center;
 }
+
+.tr-header th {
+  background: #e6e6e6;
+  font-weight: bold;
+}
+
+.tr-grey {
+  background: #e6e6e6;
+  font-weight: bold;
+}
+
+.tr-cell {
+  border: 1px solid #ccc;
+}
