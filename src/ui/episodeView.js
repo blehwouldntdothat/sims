@@ -63,10 +63,13 @@ export function initEpisodeView(state) {
     contentEl.appendChild(createEl("h2", null, result.challenge.name));
 
     const list = createEl("ol", null);
-    result.ranking.forEach(entry => {
-      list.appendChild(
-        createEl("li", null, `${entry.name} (score: ${entry.score.toFixed(2)})`)
+    result.ranking.forEach((entry, index) => {
+      const li = createEl(
+        "li",
+        null,
+        `${entry.name} (score: ${entry.score.toFixed(2)})`
       );
+      list.appendChild(li);
     });
 
     contentEl.appendChild(list);
@@ -94,7 +97,7 @@ export function initEpisodeView(state) {
     }
 
     if (elim.type === "finale") {
-      contentEl.appendChild(createEl("p", null, `The winner is ${elim.winnerId}!`));
+      contentEl.appendChild(createEl("h2", null, `WINNER: ${elim.winnerId}`));
       return;
     }
 
@@ -114,30 +117,78 @@ export function initEpisodeView(state) {
     clearElement(trackRecordWrapper);
 
     const table = createEl("table", "track-record-table");
-    const thead = createEl("thead", null);
-    const headerRow = createEl("tr", null);
 
-    headerRow.appendChild(createEl("th", null, "Camper"));
+    // HEADER
+    const thead = createEl("thead", null);
+    const headerRow = createEl("tr", "tr-header");
+
+    headerRow.appendChild(createEl("th", "tr-grey", "Rank"));
+    headerRow.appendChild(createEl("th", "tr-grey", "Contestant"));
 
     for (let ep = 1; ep <= state.episodeNumber; ep++) {
-      headerRow.appendChild(createEl("th", null, `E${ep}`));
+      headerRow.appendChild(createEl("th", "tr-grey", `E${ep}`));
     }
 
     thead.appendChild(headerRow);
     table.appendChild(thead);
 
+    // BODY
     const tbody = createEl("tbody", null);
-    const all = [...state.currentCast, ...state.eliminated];
 
-    all.forEach(camper => {
+    const active = [...state.currentCast];
+    const eliminated = [...state.eliminated];
+
+    const sorted = [
+      ...active, // active players at top
+      ...eliminated // eliminated in chronological order
+    ];
+
+    sorted.forEach((camper, index) => {
       const row = createEl("tr", null);
-      row.appendChild(createEl("td", null, camper.name));
 
+      // Rank
+      const rank = index + 1;
+      const suffix =
+        rank === 1 ? "1st" :
+        rank === 2 ? "2nd" :
+        rank === 3 ? "3rd" :
+        `${rank}th`;
+
+      row.appendChild(createEl("td", "tr-grey", suffix));
+
+      // Name
+      row.appendChild(createEl("td", "tr-grey", camper.name));
+
+      // Episode cells
       for (let ep = 1; ep <= state.episodeNumber; ep++) {
-        const cell = createEl("td", null, "");
+        const cell = createEl("td", "tr-cell", "");
         const entries = state.trackRecord[camper.id] || [];
         const entry = entries.find(e => e.episode === ep);
-        if (entry) cell.textContent = entry.result;
+
+        if (entry) {
+          if (entry.result === "ELIM") {
+            cell.textContent = "ELIM";
+            cell.style.background = "#ff4b4b";
+            cell.style.color = "white";
+          } else if (entry.result === "WINNER") {
+            cell.textContent = "WINNER";
+            cell.style.background = "yellow";
+            cell.style.fontWeight = "bold";
+          } else if (entry.result === "RUNNER") {
+            cell.textContent = "RUNNER UP";
+            cell.style.background = "#d0d0d0";
+          } else if (entry.result === "WIN") {
+            cell.textContent = "WIN";
+            cell.style.background = "#4a66d5";
+            cell.style.color = "white";
+          } else {
+            cell.textContent = entry.result;
+          }
+        } else {
+          cell.textContent = "SAFE";
+          cell.style.background = "white";
+        }
+
         row.appendChild(cell);
       }
 
