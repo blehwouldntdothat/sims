@@ -1,12 +1,19 @@
 import { EpisodePhase } from "./state.js";
 import { runChallenge } from "./challengeEngine.js";
 import { relationshipEvents } from "../data/events.js";
-import { applyEventToPair, modifyRelationship } from "./relationships.js";
+import { applyEventToPair } from "./relationships.js";
 import { addTrackRecordEntry } from "./trackRecord.js";
 import { maybeFindAdvantages, applyAdvantagesToVotes } from "./advantagesEngine.js";
 
 function randomChoice(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+export function runIntroPhase(state) {
+  // Nothing to compute — intro is just displayed in UI
+  state.lastEvents = [];
+  state.lastChallengeResult = null;
+  state.lastElimination = null;
 }
 
 export function runChallengePhase(state) {
@@ -23,15 +30,17 @@ export function runPostChallengePhase(state) {
   const events = [];
 
   if (cast.length >= 2) {
-    // generate a few random relationship events
     for (let i = 0; i < 3; i++) {
       const a = randomChoice(cast);
       let b = randomChoice(cast);
+
       if (a.id === b.id && cast.length > 1) {
-        b = randomChoice(cast.filter((c) => c.id !== a.id));
+        b = cast.find(c => c.id !== a.id);
       }
+
       const ev = randomChoice(relationshipEvents);
       applyEventToPair(state, ev, a.id, b.id);
+
       events.push({
         aId: a.id,
         bId: b.id,
@@ -46,8 +55,8 @@ export function runPostChallengePhase(state) {
 
 export function runEliminationPhase(state) {
   const cast = state.currentCast;
+
   if (cast.length <= 2) {
-    // finale logic placeholder
     const winner = randomChoice(cast);
     state.lastElimination = {
       type: "finale",
@@ -58,22 +67,10 @@ export function runEliminationPhase(state) {
     return state.lastElimination;
   }
 
-  // simple voting: everyone votes for someone they like least (low relationship)
   const votes = [];
   for (const voter of cast) {
-    let worstTarget = null;
-    let worstScore = Infinity;
-    for (const target of cast) {
-      if (target.id === voter.id) continue;
-      const rel = 0; // you can plug getRelationship here if you want
-      if (rel < worstScore) {
-        worstScore = rel;
-        worstTarget = target;
-      }
-    }
-    if (worstTarget) {
-      votes.push({ voterId: voter.id, targetId: worstTarget.id });
-    }
+    const target = randomChoice(cast.filter(c => c.id !== voter.id));
+    votes.push({ voterId: voter.id, targetId: target.id });
   }
 
   const adjustedVotes = applyAdvantagesToVotes(state, votes);
@@ -94,15 +91,10 @@ export function runEliminationPhase(state) {
     }
   }
 
-  let eliminatedId;
-  if (targets.length === 1) {
-    eliminatedId = targets[0];
-  } else {
-    // tiebreaker challenge placeholder: random among tied
-    eliminatedId = randomChoice(targets);
-  }
+  const eliminatedId =
+    targets.length === 1 ? targets[0] : randomChoice(targets);
 
-  const eliminatedIndex = state.currentCast.findIndex((c) => c.id === eliminatedId);
+  const eliminatedIndex = state.currentCast.findIndex(c => c.id === eliminatedId);
   const eliminated = state.currentCast[eliminatedIndex];
 
   state.currentCast.splice(eliminatedIndex, 1);
@@ -121,15 +113,18 @@ export function runEliminationPhase(state) {
 }
 
 export function advancePhase(state) {
-  if (state.phase === EpisodePhase.CHALLENGE) {
+  if (state.phase === "intro") {
+    state.phase = EpisodePhase.CHALLENGE;
     runChallengePhase(state);
+  } else if (state.phase === EpisodePhase.CHALLENGE) {
+    runPostChallengePhase(state);
     state.phase = EpisodePhase.POST_CHALLENGE;
   } else if (state.phase === EpisodePhase.POST_CHALLENGE) {
-    runPostChallengePhase(state);
+    runEliminationPhase(state);
     state.phase = EpisodePhase.ELIMINATION;
   } else if (state.phase === EpisodePhase.ELIMINATION) {
-    runEliminationPhase(state);
     state.episodeNumber += 1;
     state.phase = EpisodePhase.CHALLENGE;
+    runChallengePhase(state);
   }
 }
