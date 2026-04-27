@@ -10,7 +10,6 @@ function randomChoice(arr) {
 }
 
 export function runIntroPhase(state) {
-  // Nothing to compute — intro is just displayed in UI
   state.lastEvents = [];
   state.lastChallengeResult = null;
   state.lastElimination = null;
@@ -19,6 +18,12 @@ export function runIntroPhase(state) {
 export function runChallengePhase(state) {
   const result = runChallenge(state, "normal");
   maybeFindAdvantages(state);
+
+  // Mark challenge winner in track record
+  if (result && result.ranking && result.ranking.length > 0) {
+    const top = result.ranking[0];
+    addTrackRecordEntry(state, top.camperId, state.episodeNumber, "WIN");
+  }
 
   state.lastEvents = [];
   state.lastElimination = null;
@@ -56,17 +61,43 @@ export function runPostChallengePhase(state) {
 export function runEliminationPhase(state) {
   const cast = state.currentCast;
 
+  // FINALE: 2 or fewer left
   if (cast.length <= 2) {
-    const winner = randomChoice(cast);
+    if (cast.length === 1) {
+      const winner = cast[0];
+      addTrackRecordEntry(state, winner.id, state.episodeNumber, "WINNER");
+      state.lastElimination = {
+        type: "finale",
+        winnerId: winner.id,
+        runnerId: null,
+      };
+      return state.lastElimination;
+    }
+
+    const [a, b] = cast;
+    const winner = randomChoice([a, b]);
+    const runner = winner.id === a.id ? b : a;
+
+    addTrackRecordEntry(state, winner.id, state.episodeNumber, "WINNER");
+    addTrackRecordEntry(state, runner.id, state.episodeNumber, "RUNNER");
+
+    // Winner stays in currentCast, runner joins eliminated
+    state.currentCast = [winner];
+    state.eliminated.push({
+      ...runner,
+      _elimOrder: state.eliminated.length + 1,
+    });
+
     state.lastElimination = {
       type: "finale",
       winnerId: winner.id,
-      eliminatedId: null,
+      runnerId: runner.id,
     };
-    addTrackRecordEntry(state, winner.id, state.episodeNumber, "WINNER");
+
     return state.lastElimination;
   }
 
+  // NORMAL ELIMINATION
   const votes = [];
   for (const voter of cast) {
     const target = randomChoice(cast.filter(c => c.id !== voter.id));
@@ -98,7 +129,10 @@ export function runEliminationPhase(state) {
   const eliminated = state.currentCast[eliminatedIndex];
 
   state.currentCast.splice(eliminatedIndex, 1);
-  state.eliminated.push(eliminated);
+  state.eliminated.push({
+    ...eliminated,
+    _elimOrder: state.eliminated.length + 1,
+  });
 
   addTrackRecordEntry(state, eliminated.id, state.episodeNumber, "ELIM");
 
