@@ -63,7 +63,7 @@ export function initEpisodeView(state) {
     contentEl.appendChild(createEl("h2", null, result.challenge.name));
 
     const list = createEl("ol", null);
-    result.ranking.forEach((entry, index) => {
+    result.ranking.forEach(entry => {
       const li = createEl(
         "li",
         null,
@@ -97,7 +97,10 @@ export function initEpisodeView(state) {
     }
 
     if (elim.type === "finale") {
-      contentEl.appendChild(createEl("h2", null, `WINNER: ${elim.winnerId}`));
+      const text = elim.runnerId
+        ? `WINNER: ${elim.winnerId} • RUNNER-UP: ${elim.runnerId}`
+        : `WINNER: ${elim.winnerId}`;
+      contentEl.appendChild(createEl("h2", null, text));
       return;
     }
 
@@ -118,7 +121,6 @@ export function initEpisodeView(state) {
 
     const table = createEl("table", "track-record-table");
 
-    // HEADER
     const thead = createEl("thead", null);
     const headerRow = createEl("tr", "tr-header");
 
@@ -132,7 +134,6 @@ export function initEpisodeView(state) {
     thead.appendChild(headerRow);
     table.appendChild(thead);
 
-    // BODY
     const tbody = createEl("tbody", null);
 
     const active = [...state.currentCast];
@@ -140,47 +141,47 @@ export function initEpisodeView(state) {
 
     const totalPlayers = active.length + eliminated.length;
 
-    // Sort eliminated by elimination order (first eliminated at bottom)
-    const sortedEliminated = eliminated.map((c, i) => ({
-      camper: c,
-      elimOrder: i + 1
-    }));
+    // Sort eliminated so last eliminated is highest, first eliminated is lowest
+    const sortedEliminated = eliminated
+      .slice()
+      .sort((a, b) => (b._elimOrder || 0) - (a._elimOrder || 0));
 
-    // Active players first, then eliminated
     const sorted = [
       ...active.map(c => ({ camper: c, active: true })),
-      ...sortedEliminated.map(e => ({ camper: e.camper, elimOrder: e.elimOrder }))
+      ...sortedEliminated.map(c => ({ camper: c, active: false })),
     ];
 
-    sorted.forEach((entry, index) => {
+    const finaleDone =
+      state.lastElimination && state.lastElimination.type === "finale";
+
+    sorted.forEach(entry => {
       const camper = entry.camper;
       const row = createEl("tr", null);
 
       // Rank
       let rankText = "TBA";
 
-      if (!entry.active) {
-        const rank = totalPlayers - entry.elimOrder + 1;
+      if (entry.active) {
+        if (finaleDone) {
+          rankText = "1st";
+        }
+      } else {
+        const elimOrder = camper._elimOrder || 1;
+        const rank = totalPlayers - elimOrder + 1;
         const suffix =
           rank === 1 ? "1st" :
           rank === 2 ? "2nd" :
           rank === 3 ? "3rd" :
           `${rank}th`;
-
         rankText = suffix;
       }
 
       row.appendChild(createEl("td", "tr-grey", rankText));
-
-      // Name
       row.appendChild(createEl("td", "tr-grey", camper.name));
-
-      // Episode cells
-      let eliminatedAt = null;
 
       const entries = state.trackRecord[camper.id] || [];
       const elimEntry = entries.find(e => e.result === "ELIM");
-      if (elimEntry) eliminatedAt = elimEntry.episode;
+      const eliminatedAt = elimEntry ? elimEntry.episode : null;
 
       for (let ep = 1; ep <= state.episodeNumber; ep++) {
         const cell = createEl("td", "tr-cell", "");
@@ -191,28 +192,28 @@ export function initEpisodeView(state) {
           continue;
         }
 
-        const entry = entries.find(e => e.episode === ep);
+        const epEntry = entries.find(e => e.episode === ep);
 
-        if (entry) {
-          if (entry.result === "ELIM") {
+        if (epEntry) {
+          if (epEntry.result === "ELIM") {
             cell.textContent = "ELIM";
             cell.style.background = "#ff0000";
             cell.style.color = "black";
-          } else if (entry.result === "WINNER") {
+          } else if (epEntry.result === "WINNER") {
             cell.textContent = "WINNER";
             cell.style.background = "yellow";
             cell.style.fontWeight = "bold";
-          } else if (entry.result === "RUNNER") {
+          } else if (epEntry.result === "RUNNER") {
             cell.textContent = "RUNNER-UP";
             cell.style.background = "#d0d0d0";
             cell.style.fontWeight = "bold";
-          } else if (entry.result === "WIN") {
+          } else if (epEntry.result === "WIN") {
             cell.textContent = "WIN";
             cell.style.background = "#4a66d5";
             cell.style.color = "white";
             cell.style.fontWeight = "bold";
           } else {
-            cell.textContent = entry.result;
+            cell.textContent = epEntry.result;
           }
         } else {
           cell.textContent = "SAFE";
