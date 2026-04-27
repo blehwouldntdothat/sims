@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Disventure Camp Simulator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Main menu -->
+    <main id="main-menu" class="page active">
+      <header class="hero">
+        <h1>Disventure Camp Simulator</h1>
+        <p>Choose your campers and simulate your dream season!</p>
+      </header>
+
+      <section class="menu-layout">
+        <section class="menu-left">
+          <h2>Choose your contestants</h2>
+
+          <div class="search-row">
+            <input
+              type="text"
+              id="search-input"
+              placeholder="Search campers..."
+            />
+            <button id="filter-button" class="icon-button">⚙</button>
+          </div>
+
+          <div class="menu-buttons-row">
+            <button id="random-cast-btn" class="primary">Random</button>
+            <button id="cast-builder-btn" class="secondary">Cast Builder</button>
+            <button id="save-cast-btn" class="secondary">Save Cast</button>
+          </div>
+
+          <div id="campers-list" class="campers-list">
+            <!-- Filled by JS -->
+          </div>
+
+          <div class="format-row">
+            <label>
+              Premiere format:
+              <select id="premiere-format">
+                <option value="normal">Normal premiere</option>
+                <option value="double">Double premiere</option>
+              </select>
+            </label>
+
+            <label>
+              Returning format:
+              <select id="returning-format">
+                <option value="none">None</option>
+                <option value="rejoin">Rejoin twist</option>
+              </select>
+            </label>
+
+            <label>
+              Season format:
+              <select id="season-format">
+                <option value="regular">Regular</option>
+                <option value="sudden-death">Sudden death heavy</option>
+              </select>
+            </label>
+
+            <label>
+              Finale format:
+              <select id="finale-format">
+                <option value="top2">Top 2 - Regular</option>
+                <option value="top3">Top 3 - Finale challenge</option>
+              </select>
+            </label>
+          </div>
+
+          <button id="simulate-btn" class="simulate-button">
+            Simulate now!
+          </button>
+        </section>
+
+        <section class="menu-right">
+          <h2>Current Cast: <span id="current-cast-count">0</span></h2>
+          <div id="current-cast" class="current-cast-grid">
+            <!-- Filled by JS -->
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <!-- Episode view -->
+    <main id="episode-view" class="page">
+      <header class="episode-header">
+        <h1>Episode <span id="episode-number">1</span></h1>
+        <p id="episode-phase-label">Challenge</p>
+      </header>
+
+      <section id="episode-content" class="episode-content">
+        <!-- Challenge / events / elimination content -->
+      </section>
+
+      <footer class="episode-footer">
+        <button id="back-to-menu-btn" class="secondary">Back to menu</button>
+        <button id="next-phase-btn" class="primary">Next</button>
+      </footer>
+
+      <section class="track-record-section">
+        <h2>Track Record</h2>
+        <div id="track-record-table-wrapper"></div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
