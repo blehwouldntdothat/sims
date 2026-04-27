@@ -138,49 +138,79 @@ export function initEpisodeView(state) {
     const active = [...state.currentCast];
     const eliminated = [...state.eliminated];
 
+    const totalPlayers = active.length + eliminated.length;
+
+    // Sort eliminated by elimination order (first eliminated at bottom)
+    const sortedEliminated = eliminated.map((c, i) => ({
+      camper: c,
+      elimOrder: i + 1
+    }));
+
+    // Active players first, then eliminated
     const sorted = [
-      ...active, // active players at top
-      ...eliminated // eliminated in chronological order
+      ...active.map(c => ({ camper: c, active: true })),
+      ...sortedEliminated.map(e => ({ camper: e.camper, elimOrder: e.elimOrder }))
     ];
 
-    sorted.forEach((camper, index) => {
+    sorted.forEach((entry, index) => {
+      const camper = entry.camper;
       const row = createEl("tr", null);
 
       // Rank
-      const rank = index + 1;
-      const suffix =
-        rank === 1 ? "1st" :
-        rank === 2 ? "2nd" :
-        rank === 3 ? "3rd" :
-        `${rank}th`;
+      let rankText = "TBA";
 
-      row.appendChild(createEl("td", "tr-grey", suffix));
+      if (!entry.active) {
+        const rank = totalPlayers - entry.elimOrder + 1;
+        const suffix =
+          rank === 1 ? "1st" :
+          rank === 2 ? "2nd" :
+          rank === 3 ? "3rd" :
+          `${rank}th`;
+
+        rankText = suffix;
+      }
+
+      row.appendChild(createEl("td", "tr-grey", rankText));
 
       // Name
       row.appendChild(createEl("td", "tr-grey", camper.name));
 
       // Episode cells
+      let eliminatedAt = null;
+
+      const entries = state.trackRecord[camper.id] || [];
+      const elimEntry = entries.find(e => e.result === "ELIM");
+      if (elimEntry) eliminatedAt = elimEntry.episode;
+
       for (let ep = 1; ep <= state.episodeNumber; ep++) {
         const cell = createEl("td", "tr-cell", "");
-        const entries = state.trackRecord[camper.id] || [];
+
+        if (eliminatedAt && ep > eliminatedAt) {
+          cell.style.background = "#cccccc";
+          row.appendChild(cell);
+          continue;
+        }
+
         const entry = entries.find(e => e.episode === ep);
 
         if (entry) {
           if (entry.result === "ELIM") {
             cell.textContent = "ELIM";
-            cell.style.background = "#ff4b4b";
-            cell.style.color = "white";
+            cell.style.background = "#ff0000";
+            cell.style.color = "black";
           } else if (entry.result === "WINNER") {
             cell.textContent = "WINNER";
             cell.style.background = "yellow";
             cell.style.fontWeight = "bold";
           } else if (entry.result === "RUNNER") {
-            cell.textContent = "RUNNER UP";
+            cell.textContent = "RUNNER-UP";
             cell.style.background = "#d0d0d0";
+            cell.style.fontWeight = "bold";
           } else if (entry.result === "WIN") {
             cell.textContent = "WIN";
             cell.style.background = "#4a66d5";
             cell.style.color = "white";
+            cell.style.fontWeight = "bold";
           } else {
             cell.textContent = entry.result;
           }
