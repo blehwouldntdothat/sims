@@ -1,6 +1,7 @@
 import { EpisodePhase } from "../engine/state.js";
 import { advancePhase } from "../engine/episode.js";
 import { clearElement, createEl } from "./components.js";
+import { introLines } from "../data/intros.js";
 
 export function initEpisodeView(state) {
   const menuPage = document.getElementById("main-menu");
@@ -17,6 +18,12 @@ export function initEpisodeView(state) {
     episodeNumberEl.textContent = state.episodeNumber.toString();
     clearElement(contentEl);
 
+    if (state.phase === "intro") {
+      phaseLabelEl.textContent = "Meet the Campers";
+      renderIntro();
+      return;
+    }
+
     if (state.phase === EpisodePhase.CHALLENGE) {
       phaseLabelEl.textContent = "Challenge";
       renderChallenge();
@@ -31,77 +38,76 @@ export function initEpisodeView(state) {
     renderTrackRecord();
   }
 
+  function renderIntro() {
+    const title = createEl("h2", null, "Welcome to the Island!");
+    contentEl.appendChild(title);
+
+    const ul = createEl("ul", null);
+
+    state.currentCast.forEach(c => {
+      const line = introLines[c.id] || `${c.name} introduces themselves.`;
+      ul.appendChild(createEl("li", null, `${c.name}: "${line}"`));
+    });
+
+    contentEl.appendChild(ul);
+  }
+
   function renderChallenge() {
     const result = state.lastChallengeResult;
+
     if (!result || !result.challenge) {
-      const p = createEl("p", null, "Challenge will be generated when you click Next.");
-      contentEl.appendChild(p);
+      contentEl.appendChild(createEl("p", null, "Challenge loading..."));
       return;
     }
 
-    const title = createEl("h2", null, result.challenge.name);
-    contentEl.appendChild(title);
+    contentEl.appendChild(createEl("h2", null, result.challenge.name));
 
     const list = createEl("ol", null);
-    result.ranking.forEach((entry) => {
-      const li = createEl(
-        "li",
-        null,
-        `${entry.name} (score: ${entry.score.toFixed(2)})`
+    result.ranking.forEach(entry => {
+      list.appendChild(
+        createEl("li", null, `${entry.name} (score: ${entry.score.toFixed(2)})`)
       );
-      list.appendChild(li);
     });
+
     contentEl.appendChild(list);
   }
 
   function renderPostChallenge() {
     const events = state.lastEvents || [];
+
     if (!events.length) {
-      const p = createEl("p", null, "No notable events this episode.");
-      contentEl.appendChild(p);
+      contentEl.appendChild(createEl("p", null, "No notable events this episode."));
       return;
     }
 
     const ul = createEl("ul", null);
-    events.forEach((ev) => {
-      const li = createEl("li", null, ev.text);
-      ul.appendChild(li);
-    });
+    events.forEach(ev => ul.appendChild(createEl("li", null, ev.text)));
     contentEl.appendChild(ul);
   }
 
   function renderElimination() {
     const elim = state.lastElimination;
+
     if (!elim) {
-      const p = createEl("p", null, "Elimination will be determined when you click Next.");
-      contentEl.appendChild(p);
+      contentEl.appendChild(createEl("p", null, "Elimination loading..."));
       return;
     }
 
     if (elim.type === "finale") {
-      const p = createEl("p", null, `The winner is ${elim.winnerId}!`);
-      contentEl.appendChild(p);
+      contentEl.appendChild(createEl("p", null, `The winner is ${elim.winnerId}!`));
       return;
     }
 
-    const title = createEl(
-      "h2",
-      null,
-      `Eliminated: ${elim.eliminatedName} (${elim.eliminatedId})`
+    contentEl.appendChild(
+      createEl("h2", null, `Eliminated: ${elim.eliminatedName}`)
     );
-    contentEl.appendChild(title);
 
-    if (elim.votes) {
-      const votesTitle = createEl("h3", null, "Vote Count");
-      contentEl.appendChild(votesTitle);
+    const ul = createEl("ul", null);
+    Object.entries(elim.votes).forEach(([id, count]) => {
+      ul.appendChild(createEl("li", null, `${id}: ${count} vote(s)`));
+    });
 
-      const ul = createEl("ul", null);
-      Object.entries(elim.votes).forEach(([id, count]) => {
-        const li = createEl("li", null, `${id}: ${count} vote(s)`);
-        ul.appendChild(li);
-      });
-      contentEl.appendChild(ul);
-    }
+    contentEl.appendChild(ul);
   }
 
   function renderTrackRecord() {
@@ -113,7 +119,6 @@ export function initEpisodeView(state) {
 
     headerRow.appendChild(createEl("th", null, "Camper"));
 
-    // episodes up to current
     for (let ep = 1; ep <= state.episodeNumber; ep++) {
       headerRow.appendChild(createEl("th", null, `E${ep}`));
     }
@@ -122,20 +127,17 @@ export function initEpisodeView(state) {
     table.appendChild(thead);
 
     const tbody = createEl("tbody", null);
-
     const all = [...state.currentCast, ...state.eliminated];
 
-    all.forEach((camper) => {
+    all.forEach(camper => {
       const row = createEl("tr", null);
       row.appendChild(createEl("td", null, camper.name));
 
       for (let ep = 1; ep <= state.episodeNumber; ep++) {
         const cell = createEl("td", null, "");
         const entries = state.trackRecord[camper.id] || [];
-        const entry = entries.find((e) => e.episode === ep);
-        if (entry) {
-          cell.textContent = entry.result;
-        }
+        const entry = entries.find(e => e.episode === ep);
+        if (entry) cell.textContent = entry.result;
         row.appendChild(cell);
       }
 
@@ -157,7 +159,7 @@ export function initEpisodeView(state) {
   });
 
   document.addEventListener("episode:start", () => {
-    // reset episode state for a new run if you want
+    state.phase = "intro";
     renderEpisode();
   });
 }
