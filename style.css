@@ -1,3 +1,5 @@
+/* RESET + BASE ------------------------------------------------------------ */
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -23,6 +25,8 @@ body {
 .page.active {
   display: block;
 }
+
+/* MAIN MENU --------------------------------------------------------------- */
 
 .hero {
   text-align: center;
@@ -64,14 +68,6 @@ body {
   padding: 6px 8px;
   border-radius: 4px;
   border: 1px solid #ccc;
-}
-
-.icon-button {
-  padding: 6px 10px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  background: #eee;
-  cursor: pointer;
 }
 
 .menu-buttons-row {
@@ -157,6 +153,20 @@ body {
   border: 1px solid #ccc;
 }
 
+.advantages-row {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.advantages-row h3 {
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
 .current-cast-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -182,7 +192,7 @@ body {
   cursor: pointer;
 }
 
-/* Episode view */
+/* EPISODE VIEW ------------------------------------------------------------ */
 
 .episode-header {
   background: #ffffff;
@@ -215,6 +225,8 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 }
 
+/* TRACK RECORD TABLE ------------------------------------------------------ */
+
 .track-record-table {
   width: 100%;
   border-collapse: collapse;
@@ -223,21 +235,51 @@ body {
 
 .track-record-table th,
 .track-record-table td {
-  border: 1px solid #ddd;
+  border: 1px solid #ccc;
   padding: 4px 6px;
   text-align: center;
 }
 
+/* Header row */
 .tr-header th {
   background: #e6e6e6;
   font-weight: bold;
 }
 
+/* Grey cells (Rank + Contestant column + header) */
 .tr-grey {
   background: #e6e6e6;
   font-weight: bold;
 }
 
+/* Episode cells */
 .tr-cell {
   border: 1px solid #ccc;
+}
+
+/* Special colours */
+.tr-win {
+  background: #4a66d5;
+  color: white;
+  font-weight: bold;
+}
+
+.tr-elim {
+  background: #ff4b4b;
+  color: white;
+  font-weight: bold;
+}
+
+.tr-winner {
+  background: yellow;
+  font-weight: bold;
+}
+
+.tr-runner {
+  background: #d0d0d0;
+  font-weight: bold;
+}
+
+.tr-safe {
+  background: white;
 }
