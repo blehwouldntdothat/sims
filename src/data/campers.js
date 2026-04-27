@@ -1,0 +1,63 @@
+export const campers = [
+  {
+    id: "molly",
+    name: "Molly",
+    team: null,
+    stats: {
+      strength: 5,
+      agility: 6,
+      stamina: 6,
+      intelligence: 7,
+      skill: 6,
+      loyalty: 7,
+      luck: 5,
+    },
+    traits: ["Good Singer", "Strategist"],
+  },
+  {
+    id: "noah",
+    name: "Noah",
+    team: null,
+    stats: {
+      strength: 4,
+      agility: 5,
+      stamina: 5,
+      intelligence: 8,
+      skill: 6,
+      loyalty: 6,
+      luck: 5,
+    },
+    traits: ["Smart", "Sarcastic"],
+  },
+  {
+    id: "rhea",
+    name: "Rhea",
+    team: null,
+    stats: {
+      strength: 6,
+      agility: 7,
+      stamina: 7,
+      intelligence: 5,
+      skill: 6,
+      loyalty: 5,
+      luck: 6,
+    },
+    traits: ["Athletic", "Hothead"],
+  },
+  {
+    id: "liam",
+    name: "Liam",
+    team: null,
+    stats: {
+      strength: 5,
+      agility: 5,
+      stamina: 5,
+      intelligence: 5,
+      skill: 5,
+      loyalty: 5,
+      luck: 5,
+    },
+    traits: ["Average", "Background"],
+  },
+  // add more canon campers here
+];
