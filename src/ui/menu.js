@@ -8,12 +8,12 @@ export function initMenu() {
 
   const searchInput = document.getElementById("search-input");
   const campersList = document.getElementById("campers-list");
-  const currentCastGrid = document.getElementById("current-cast"); // ✅ matches your HTML
+  const currentCastGrid = document.getElementById("current-cast"); // ✅ FIXED
   const currentCastCount = document.getElementById("current-cast-count");
   const simulateBtn = document.getElementById("simulate-btn");
 
   // -----------------------------
-  // RENDER DEFAULT CAMPER LIST
+  // RENDER CAMPER LIST
   // -----------------------------
   function renderPlayerList(filter = "") {
     campersList.innerHTML = "";
@@ -41,7 +41,7 @@ export function initMenu() {
   }
 
   // -----------------------------
-  // ADD CAMPER TO CAST
+  // ADD CAMPER
   // -----------------------------
   function addToCast(player) {
     if (state.currentCast.find(c => c.id === player.id)) return;
@@ -51,7 +51,7 @@ export function initMenu() {
   }
 
   // -----------------------------
-  // REMOVE CAMPER FROM CAST
+  // REMOVE CAMPER
   // -----------------------------
   function removeFromCast(id) {
     state.currentCast = state.currentCast.filter(c => c.id !== id);
@@ -59,10 +59,10 @@ export function initMenu() {
   }
 
   // -----------------------------
-  // RENDER CURRENT CAST GRID
+  // RENDER CURRENT CAST
   // -----------------------------
   function renderCurrentCast() {
-    currentCastGrid.innerHTML = "";
+    currentCastGrid.innerHTML = ""; // ✅ FIXED TARGET
 
     state.currentCast.forEach(player => {
       const card = document.createElement("div");
@@ -82,13 +82,11 @@ export function initMenu() {
       currentCastGrid.appendChild(card);
     });
 
-    if (currentCastCount) {
-      currentCastCount.textContent = state.currentCast.length.toString();
-    }
+    currentCastCount.textContent = state.currentCast.length.toString();
   }
 
   // -----------------------------
-  // RESET STATE FOR NEW SIMULATION
+  // RESET STATE
   // -----------------------------
   function resetSimulationState() {
     state.trackRecord = {};
@@ -118,7 +116,7 @@ export function initMenu() {
   });
 
   // -----------------------------
-  // SEARCH BAR
+  // SEARCH
   // -----------------------------
   searchInput.addEventListener("input", e => {
     renderPlayerList(e.target.value);
@@ -128,6 +126,5 @@ export function initMenu() {
   renderPlayerList();
   renderCurrentCast();
 
-  // Initialize episode view with shared state
   initEpisodeView(state);
 }
