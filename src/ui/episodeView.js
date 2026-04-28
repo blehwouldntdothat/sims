@@ -2,7 +2,8 @@ import { EpisodePhase } from "../engine/state.js";
 import {
   runChallengePhase,
   runPostChallengePhase,
-  runEliminationPhase
+  runEliminationPhase,
+  runFinalePhase
 } from "../engine/episode.js";
 import { clearElement, createEl } from "./components.js";
 import { introLines } from "../data/intros.js";
@@ -33,6 +34,12 @@ export function initEpisodeView(state) {
     if (state.phase === "intro") {
       phaseLabelEl.textContent = "Meet the Campers";
       renderIntro();
+      return;
+    }
+
+    if (state.phase === "finale") {
+      phaseLabelEl.textContent = "Finale Challenge";
+      renderChallenge();
       return;
     }
 
@@ -77,20 +84,43 @@ export function initEpisodeView(state) {
     contentEl.appendChild(createEl("h2", null, result.challenge.name));
     contentEl.appendChild(createEl("p", null, result.description));
 
-    // Grouped performances
-    Object.entries(result.grouped).forEach(([performance, names]) => {
-      const line = `${names.join(" and ")} ${performance}!`;
-      contentEl.appendChild(createEl("p", null, line));
-    });
+    // Grouped performances (if not finale)
+    if (!result.isFinale) {
+      Object.entries(result.grouped).forEach(([performance, names]) => {
+        const line = `${names.join(" and ")} ${performance}!`;
+        contentEl.appendChild(createEl("p", null, line));
+      });
 
-    // Winner + immunity
-    contentEl.appendChild(
-      createEl(
-        "h3",
-        null,
-        `${result.winner.name} has won the challenge and immunity!`
-      )
-    );
+      // Winner + immunity
+      contentEl.appendChild(
+        createEl(
+          "h3",
+          null,
+          `${result.winner.name} has won the challenge and immunity!`
+        )
+      );
+    } else {
+      // Finale: show all performances ranked
+      const performanceTiers = [
+        "slayed the challenge",
+        "had a great performance",
+        "had a good performance",
+        "had a bad performance",
+        "flopped the challenge"
+      ];
+
+      performanceTiers.forEach(tier => {
+        const performers = result.performances.filter(p => p.performance === tier);
+        if (performers.length > 0) {
+          const names = performers.map(p => p.name).join(", ");
+          contentEl.appendChild(createEl("p", null, `${names} ${tier}!`));
+        }
+      });
+
+      contentEl.appendChild(
+        createEl("h2", null, `🏆 WINNER: ${result.winner.name}!`)
+      );
+    }
   }
 
   function renderPostChallenge() {
@@ -116,9 +146,11 @@ export function initEpisodeView(state) {
 
     if (elim.type === "finale") {
       const text = elim.runnerId
-        ? `WINNER: ${elim.winnerId} • RUNNER-UP: ${elim.runnerId}`
-        : `WINNER: ${elim.winnerId}`;
-      contentEl.appendChild(createEl("h2", null, text));
+        ? `🏆 WINNER: ${elim.winnerId}\n🥈 RUNNER-UP: ${elim.runnerId}`
+        : `🏆 WINNER: ${elim.winnerId}`;
+      const h2 = createEl("h2", null, text);
+      h2.style.whiteSpace = "pre";
+      contentEl.appendChild(h2);
       return;
     }
 
@@ -135,190 +167,199 @@ export function initEpisodeView(state) {
     }
   }
 
- function renderTrackRecord() {
-  clearElement(trackRecordWrapper);
+  function renderTrackRecord() {
+    clearElement(trackRecordWrapper);
 
-  const table = createEl("table", "track-record-table");
+    const table = createEl("table", "track-record-table");
 
-  const thead = createEl("thead", null);
-  const headerRow = createEl("tr", "tr-header");
+    const thead = createEl("thead", null);
+    const headerRow = createEl("tr", "tr-header");
 
-  headerRow.appendChild(createEl("th", "tr-grey", "Rank"));
-  headerRow.appendChild(createEl("th", "tr-grey", "Contestant"));
+    headerRow.appendChild(createEl("th", "tr-grey", "Rank"));
+    headerRow.appendChild(createEl("th", "tr-grey", "Contestant"));
 
-  for (let ep = 1; ep <= state.episodeNumber; ep++) {
-    headerRow.appendChild(createEl("th", "tr-grey", `E${ep}`));
+    for (let ep = 1; ep <= state.episodeNumber; ep++) {
+      headerRow.appendChild(createEl("th", "tr-grey", `E${ep}`));
+    }
+
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = createEl("tbody", null);
+
+    const active = [...state.currentCast];
+    const eliminated = [...state.eliminated];
+
+    const totalPlayers = active.length + eliminated.length;
+
+    // Sort eliminated by their elimination order ascending (first eliminated first)
+    const sortedEliminatedAsc = eliminated
+      .slice()
+      .sort((a, b) => (a._elimOrder || 0) - (b._elimOrder || 0));
+
+    // We'll render active first, then eliminated in reverse (most recent first),
+    // so the first eliminated ends up at the bottom.
+    const sorted = [
+      ...active.map(c => ({ camper: c, active: true })),
+      ...sortedEliminatedAsc.map(c => ({ camper: c, active: false }))
+    ];
+
+    const finaleDone =
+      state.lastElimination && state.lastElimination.type === "finale";
+
+    // Build a map from camperId to index in sortedEliminatedAsc for fallback elimOrder
+    const elimIndexMap = {};
+    sortedEliminatedAsc.forEach((c, idx) => {
+      elimIndexMap[c.id] = idx + 1; // 1-based order (1 = first eliminated)
+    });
+
+    // When rendering, we want eliminated rows to appear with most recent first,
+    // so we'll iterate sorted but when encountering eliminated rows we compute rank using elimOrder.
+    // To ensure visual order (active first, then most recent eliminated), we'll render active rows first,
+    // then render eliminated rows in reverse of sortedEliminatedAsc.
+    // Render active rows
+    sorted.filter(s => s.active).forEach(entry => {
+      const camper = entry.camper;
+      const row = createEl("tr", null);
+
+      // Rank for active contestants
+      let rankText = "TBA";
+      if (finaleDone) rankText = "1st";
+
+      row.appendChild(createEl("td", "tr-grey", rankText));
+      row.appendChild(createEl("td", "tr-grey", camper.name));
+
+      const entries = state.trackRecord[camper.id] || [];
+      const elimEntry = entries.find(e => e.result === "ELIM" || e.result === "OUT");
+      const eliminatedAt = elimEntry ? elimEntry.episode : null;
+
+      for (let ep = 1; ep <= state.episodeNumber; ep++) {
+        const cell = createEl("td", "tr-cell", "");
+
+        if (eliminatedAt && ep > eliminatedAt) {
+          cell.style.background = "#cccccc";
+          row.appendChild(cell);
+          continue;
+        }
+
+        const epEntry = entries.find(e => e.episode === ep);
+
+        if (epEntry) {
+          const res = epEntry.result;
+          if (res === "ELIM" || res === "OUT") {
+            cell.textContent = "ELIM";
+            cell.style.background = "#ff0000";
+            cell.style.color = "black";
+            cell.style.fontWeight = "bold";
+          } else if (res === "WINNER") {
+            cell.textContent = "WINNER";
+            cell.style.background = "gold";
+            cell.style.fontWeight = "bold";
+          } else if (res === "RUNNER") {
+            cell.textContent = "RUNNER-UP";
+            cell.style.background = "#d0d0d0";
+            cell.style.fontWeight = "bold";
+          } else if (res === "WIN") {
+            cell.textContent = "WIN";
+            cell.style.background = "#4a66d5";
+            cell.style.color = "white";
+            cell.style.fontWeight = "bold";
+          } else {
+            cell.textContent = res;
+          }
+        } else {
+          cell.textContent = "SAFE";
+          cell.style.background = "white";
+        }
+
+        row.appendChild(cell);
+      }
+
+      tbody.appendChild(row);
+    });
+
+    // Render eliminated rows in reverse order so most recently eliminated appears first
+    const sortedEliminatedDesc = sortedEliminatedAsc.slice().reverse();
+    sortedEliminatedDesc.forEach((camper, idx) => {
+      const row = createEl("tr", null);
+
+      // Determine elimOrder: prefer explicit _elimOrder, otherwise fallback to index in asc list
+      const explicitOrder = camper._elimOrder;
+      const fallbackOrder = elimIndexMap[camper.id] || (sortedEliminatedAsc.length - idx);
+      const elimOrder = explicitOrder || fallbackOrder;
+
+      // Rank calculation: 1st = winner, last eliminated = lowest rank
+      const rank = totalPlayers - elimOrder + 1;
+      const suffix =
+        rank === 1 ? "1st" :
+        rank === 2 ? "2nd" :
+        rank === 3 ? "3rd" :
+        `${rank}th`;
+
+      row.appendChild(createEl("td", "tr-grey", suffix));
+      row.appendChild(createEl("td", "tr-grey", camper.name));
+
+      const entries = state.trackRecord[camper.id] || [];
+      const elimEntry = entries.find(e => e.result === "ELIM" || e.result === "OUT");
+      const eliminatedAt = elimEntry ? elimEntry.episode : null;
+
+      for (let ep = 1; ep <= state.episodeNumber; ep++) {
+        const cell = createEl("td", "tr-cell", "");
+
+        if (eliminatedAt && ep > eliminatedAt) {
+          cell.style.background = "#cccccc";
+          row.appendChild(cell);
+          continue;
+        }
+
+        const epEntry = entries.find(e => e.episode === ep);
+
+        if (epEntry) {
+          const res = epEntry.result;
+          if (res === "ELIM" || res === "OUT") {
+            cell.textContent = "ELIM";
+            cell.style.background = "#ff0000";
+            cell.style.color = "black";
+            cell.style.fontWeight = "bold";
+          } else if (res === "WINNER") {
+            cell.textContent = "WINNER";
+            cell.style.background = "gold";
+            cell.style.fontWeight = "bold";
+          } else if (res === "RUNNER") {
+            cell.textContent = "RUNNER-UP";
+            cell.style.background = "#d0d0d0";
+            cell.style.fontWeight = "bold";
+          } else if (res === "WIN") {
+            cell.textContent = "WIN";
+            cell.style.background = "#4a66d5";
+            cell.style.color = "white";
+            cell.style.fontWeight = "bold";
+          } else {
+            cell.textContent = res;
+          }
+        } else {
+          cell.textContent = "SAFE";
+          cell.style.background = "white";
+        }
+
+        row.appendChild(cell);
+      }
+
+      tbody.appendChild(row);
+    });
+
+    table.appendChild(tbody);
+    trackRecordWrapper.appendChild(table);
   }
 
-  thead.appendChild(headerRow);
-  table.appendChild(thead);
+  // NEW: Check if should trigger finale
+  function shouldTriggerFinale() {
+    if (!state.config.finaleEnabled) return false;
+    const remaining = state.currentCast.length;
+    // Trigger finale with 2-3 remaining (based on format)
+    return remaining <= 3 && remaining >= 2;
+  }
 
-  const tbody = createEl("tbody", null);
-
-  const active = [...state.currentCast];
-  const eliminated = [...state.eliminated];
-
-  const totalPlayers = active.length + eliminated.length;
-
-  // Sort eliminated by their elimination order ascending (first eliminated first)
-  const sortedEliminatedAsc = eliminated
-    .slice()
-    .sort((a, b) => (a._elimOrder || 0) - (b._elimOrder || 0));
-
-  // We'll render active first, then eliminated in reverse (most recent first),
-  // so the first eliminated ends up at the bottom.
-  const sorted = [
-    ...active.map(c => ({ camper: c, active: true })),
-    ...sortedEliminatedAsc.map(c => ({ camper: c, active: false }))
-  ];
-
-  const finaleDone =
-    state.lastElimination && state.lastElimination.type === "finale";
-
-  // Build a map from camperId to index in sortedEliminatedAsc for fallback elimOrder
-  const elimIndexMap = {};
-  sortedEliminatedAsc.forEach((c, idx) => {
-    elimIndexMap[c.id] = idx + 1; // 1-based order (1 = first eliminated)
-  });
-
-  // When rendering, we want eliminated rows to appear with most recent first,
-  // so we'll iterate sorted but when encountering eliminated rows we compute rank using elimOrder.
-  // To ensure visual order (active first, then most recent eliminated), we'll render active rows first,
-  // then render eliminated rows in reverse of sortedEliminatedAsc.
-  // Render active rows
-  sorted.filter(s => s.active).forEach(entry => {
-    const camper = entry.camper;
-    const row = createEl("tr", null);
-
-    // Rank for active contestants
-    let rankText = "TBA";
-    if (finaleDone) rankText = "1st";
-
-    row.appendChild(createEl("td", "tr-grey", rankText));
-    row.appendChild(createEl("td", "tr-grey", camper.name));
-
-    const entries = state.trackRecord[camper.id] || [];
-    const elimEntry = entries.find(e => e.result === "ELIM" || e.result === "OUT");
-    const eliminatedAt = elimEntry ? elimEntry.episode : null;
-
-    for (let ep = 1; ep <= state.episodeNumber; ep++) {
-      const cell = createEl("td", "tr-cell", "");
-
-      if (eliminatedAt && ep > eliminatedAt) {
-        cell.style.background = "#cccccc";
-        row.appendChild(cell);
-        continue;
-      }
-
-      const epEntry = entries.find(e => e.episode === ep);
-
-      if (epEntry) {
-        const res = epEntry.result;
-        if (res === "ELIM" || res === "OUT") {
-          cell.textContent = "ELIM";
-          cell.style.background = "#ff0000";
-          cell.style.color = "black";
-          cell.style.fontWeight = "bold";
-        } else if (res === "WINNER") {
-          cell.textContent = "WINNER";
-          cell.style.background = "yellow";
-          cell.style.fontWeight = "bold";
-        } else if (res === "RUNNER") {
-          cell.textContent = "RUNNER-UP";
-          cell.style.background = "#d0d0d0";
-          cell.style.fontWeight = "bold";
-        } else if (res === "WIN") {
-          cell.textContent = "WIN";
-          cell.style.background = "#4a66d5";
-          cell.style.color = "white";
-          cell.style.fontWeight = "bold";
-        } else {
-          cell.textContent = res;
-        }
-      } else {
-        cell.textContent = "SAFE";
-        cell.style.background = "white";
-      }
-
-      row.appendChild(cell);
-    }
-
-    tbody.appendChild(row);
-  });
-
-  // Render eliminated rows in reverse order so most recently eliminated appears first
-  const sortedEliminatedDesc = sortedEliminatedAsc.slice().reverse();
-  sortedEliminatedDesc.forEach((camper, idx) => {
-    const row = createEl("tr", null);
-
-    // Determine elimOrder: prefer explicit _elimOrder, otherwise fallback to index in asc list
-    const explicitOrder = camper._elimOrder;
-    const fallbackOrder = elimIndexMap[camper.id] || (sortedEliminatedAsc.length - idx);
-    const elimOrder = explicitOrder || fallbackOrder;
-
-    // Rank calculation: 1st = winner, last eliminated = lowest rank
-    const rank = totalPlayers - elimOrder + 1;
-    const suffix =
-      rank === 1 ? "1st" :
-      rank === 2 ? "2nd" :
-      rank === 3 ? "3rd" :
-      `${rank}th`;
-
-    row.appendChild(createEl("td", "tr-grey", suffix));
-    row.appendChild(createEl("td", "tr-grey", camper.name));
-
-    const entries = state.trackRecord[camper.id] || [];
-    const elimEntry = entries.find(e => e.result === "ELIM" || e.result === "OUT");
-    const eliminatedAt = elimEntry ? elimEntry.episode : null;
-
-    for (let ep = 1; ep <= state.episodeNumber; ep++) {
-      const cell = createEl("td", "tr-cell", "");
-
-      if (eliminatedAt && ep > eliminatedAt) {
-        cell.style.background = "#cccccc";
-        row.appendChild(cell);
-        continue;
-      }
-
-      const epEntry = entries.find(e => e.episode === ep);
-
-      if (epEntry) {
-        const res = epEntry.result;
-        if (res === "ELIM" || res === "OUT") {
-          cell.textContent = "ELIM";
-          cell.style.background = "#ff0000";
-          cell.style.color = "black";
-          cell.style.fontWeight = "bold";
-        } else if (res === "WINNER") {
-          cell.textContent = "WINNER";
-          cell.style.background = "yellow";
-          cell.style.fontWeight = "bold";
-        } else if (res === "RUNNER") {
-          cell.textContent = "RUNNER-UP";
-          cell.style.background = "#d0d0d0";
-          cell.style.fontWeight = "bold";
-        } else if (res === "WIN") {
-          cell.textContent = "WIN";
-          cell.style.background = "#4a66d5";
-          cell.style.color = "white";
-          cell.style.fontWeight = "bold";
-        } else {
-          cell.textContent = res;
-        }
-      } else {
-        cell.textContent = "SAFE";
-        cell.style.background = "white";
-      }
-
-      row.appendChild(cell);
-    }
-
-    tbody.appendChild(row);
-  });
-
-  table.appendChild(tbody);
-  trackRecordWrapper.appendChild(table);
-}
   // PHASE FLOW (replaces advancePhase)
   nextPhaseBtn.addEventListener("click", () => {
     // Finale → Next returns to menu
@@ -335,12 +376,28 @@ export function initEpisodeView(state) {
       runPostChallengePhase(state);
       state.phase = EpisodePhase.POST_CHALLENGE;
     } else if (state.phase === EpisodePhase.POST_CHALLENGE) {
-      runEliminationPhase(state);
-      state.phase = EpisodePhase.ELIMINATION;
+      // Check if should trigger finale
+      if (shouldTriggerFinale()) {
+        state.phase = "finale";
+        runFinalePhase(state);
+      } else {
+        runEliminationPhase(state);
+        state.phase = EpisodePhase.ELIMINATION;
+      }
+    } else if (state.phase === "finale") {
+      // Finale already ran, display final results and return
+      return;
     } else if (state.phase === EpisodePhase.ELIMINATION) {
-      state.episodeNumber++;
-      state.phase = EpisodePhase.CHALLENGE;
-      runChallengePhase(state);
+      // Check again if we're now in finale range
+      if (shouldTriggerFinale()) {
+        state.phase = "finale";
+        state.episodeNumber++;
+        runFinalePhase(state);
+      } else {
+        state.episodeNumber++;
+        state.phase = EpisodePhase.CHALLENGE;
+        runChallengePhase(state);
+      }
     }
 
     renderEpisode();
