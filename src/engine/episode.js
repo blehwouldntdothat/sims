@@ -25,6 +25,7 @@ export function runChallengePhase(state) {
     addTrackRecordEntry(state, top.camperId, state.episodeNumber, "WIN");
   }
 
+  state.lastChallengeResult = result;
   state.lastEvents = [];
   state.lastElimination = null;
   return result;
@@ -61,11 +62,14 @@ export function runPostChallengePhase(state) {
 export function runEliminationPhase(state) {
   const cast = state.currentCast;
 
-  // FINALE: 2 or fewer left
+  // --------------------------
+  // FINALE (2 or fewer left)
+  // --------------------------
   if (cast.length <= 2) {
     if (cast.length === 1) {
       const winner = cast[0];
       addTrackRecordEntry(state, winner.id, state.episodeNumber, "WINNER");
+
       state.lastElimination = {
         type: "finale",
         winnerId: winner.id,
@@ -81,7 +85,7 @@ export function runEliminationPhase(state) {
     addTrackRecordEntry(state, winner.id, state.episodeNumber, "WINNER");
     addTrackRecordEntry(state, runner.id, state.episodeNumber, "RUNNER");
 
-    // Winner stays in currentCast, runner joins eliminated
+    // Winner stays, runner eliminated
     state.currentCast = [winner];
     state.eliminated.push({
       ...runner,
@@ -97,10 +101,21 @@ export function runEliminationPhase(state) {
     return state.lastElimination;
   }
 
+  // --------------------------
   // NORMAL ELIMINATION
+  // --------------------------
+
+  // IMMUNITY: Challenge winner cannot be eliminated
+  let immuneId = null;
+  const lastChallenge = state.lastChallengeResult;
+  if (lastChallenge && lastChallenge.ranking && lastChallenge.ranking.length > 0) {
+    immuneId = lastChallenge.ranking[0].camperId;
+  }
+
   const votes = [];
   for (const voter of cast) {
-    const target = randomChoice(cast.filter(c => c.id !== voter.id));
+    const targetPool = cast.filter(c => c.id !== voter.id && c.id !== immuneId);
+    const target = randomChoice(targetPool);
     votes.push({ voterId: voter.id, targetId: target.id });
   }
 
@@ -111,9 +126,13 @@ export function runEliminationPhase(state) {
     counts[v.targetId] = (counts[v.targetId] || 0) + 1;
   }
 
+  // Remove immune player from elimination pool
+  const eligibleTargets = Object.keys(counts).filter(id => id !== immuneId);
+
   let max = -1;
   let targets = [];
-  for (const [id, count] of Object.entries(counts)) {
+  for (const id of eligibleTargets) {
+    const count = counts[id];
     if (count > max) {
       max = count;
       targets = [id];
