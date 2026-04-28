@@ -8,11 +8,12 @@ export function initMenu() {
 
   const searchInput = document.getElementById("search-input");
   const campersList = document.getElementById("campers-list");
-  const currentCastGrid = document.getElementById("current-cast-grid");
+  const currentCastGrid = document.getElementById("current-cast"); // ✅ matches your HTML
+  const currentCastCount = document.getElementById("current-cast-count");
   const simulateBtn = document.getElementById("simulate-btn");
 
   // -----------------------------
-  // RENDER DEFAULT PLAYER LIST
+  // RENDER DEFAULT CAMPER LIST
   // -----------------------------
   function renderPlayerList(filter = "") {
     campersList.innerHTML = "";
@@ -40,20 +41,17 @@ export function initMenu() {
   }
 
   // -----------------------------
-  // ADD PLAYER TO CAST
+  // ADD CAMPER TO CAST
   // -----------------------------
   function addToCast(player) {
     if (state.currentCast.find(c => c.id === player.id)) return;
 
-    state.currentCast.push({
-      ...player
-    });
-
+    state.currentCast.push({ ...player });
     renderCurrentCast();
   }
 
   // -----------------------------
-  // REMOVE PLAYER FROM CAST
+  // REMOVE CAMPER FROM CAST
   // -----------------------------
   function removeFromCast(id) {
     state.currentCast = state.currentCast.filter(c => c.id !== id);
@@ -83,6 +81,10 @@ export function initMenu() {
       card.appendChild(remove);
       currentCastGrid.appendChild(card);
     });
+
+    if (currentCastCount) {
+      currentCastCount.textContent = state.currentCast.length.toString();
+    }
   }
 
   // -----------------------------
@@ -126,6 +128,6 @@ export function initMenu() {
   renderPlayerList();
   renderCurrentCast();
 
-  // Initialize episode view
+  // Initialize episode view with shared state
   initEpisodeView(state);
 }
