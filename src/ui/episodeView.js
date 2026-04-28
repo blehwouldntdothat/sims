@@ -18,6 +18,14 @@ export function initEpisodeView(state) {
     episodeNumberEl.textContent = state.episodeNumber.toString();
     clearElement(contentEl);
 
+    // Finale → Next returns to menu
+    if (state.lastElimination && state.lastElimination.type === "finale") {
+      phaseLabelEl.textContent = "Final Results";
+      renderElimination();
+      renderTrackRecord();
+      return;
+    }
+
     if (state.phase === "intro") {
       phaseLabelEl.textContent = "Meet the Campers";
       renderIntro();
@@ -141,7 +149,7 @@ export function initEpisodeView(state) {
 
     const totalPlayers = active.length + eliminated.length;
 
-    // Sort eliminated so last eliminated is highest, first eliminated is lowest
+    // Sort eliminated: last eliminated at top, first eliminated at bottom
     const sortedEliminated = eliminated
       .slice()
       .sort((a, b) => (b._elimOrder || 0) - (a._elimOrder || 0));
@@ -231,6 +239,13 @@ export function initEpisodeView(state) {
   }
 
   nextPhaseBtn.addEventListener("click", () => {
+    // Finale → Next returns to menu
+    if (state.lastElimination && state.lastElimination.type === "finale") {
+      episodePage.classList.remove("active");
+      menuPage.classList.add("active");
+      return;
+    }
+
     advancePhase(state);
     renderEpisode();
   });
