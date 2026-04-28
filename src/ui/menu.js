@@ -11,6 +11,7 @@ export function initMenu() {
   const currentCastGrid = document.getElementById("current-cast"); // ✅ FIXED
   const currentCastCount = document.getElementById("current-cast-count");
   const simulateBtn = document.getElementById("simulate-btn");
+  const finaleEnabledCheckbox = document.getElementById("finale-enabled-checkbox");
 
   // -----------------------------
   // RENDER CAMPER LIST
@@ -108,6 +109,9 @@ export function initMenu() {
     }
 
     resetSimulationState();
+
+    // Set finale enabled from checkbox
+    state.config.finaleEnabled = finaleEnabledCheckbox.checked;
 
     menuPage.classList.remove("active");
     episodePage.classList.add("active");
