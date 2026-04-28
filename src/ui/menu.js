@@ -1,6 +1,6 @@
 import { state } from "../engine/state.js";
 import { initEpisodeView } from "./episodeView.js";
-import { defaultPlayers } from "../data/defaultPlayers.js";
+import { campers } from "../data/campers.js";
 
 export function initMenu() {
   const menuPage = document.getElementById("main-menu");
@@ -17,7 +17,7 @@ export function initMenu() {
   function renderPlayerList(filter = "") {
     campersList.innerHTML = "";
 
-    const filtered = defaultPlayers.filter(p =>
+    const filtered = campers.filter(p =>
       p.name.toLowerCase().includes(filter.toLowerCase())
     );
 
