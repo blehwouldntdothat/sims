@@ -33,3 +33,7 @@ export function createInitialState() {
     lastElimination: null,
   };
 }
+
+// ⭐ ADD THIS — the missing export
+export const state = createInitialState();
+
