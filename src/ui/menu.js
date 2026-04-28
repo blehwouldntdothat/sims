@@ -1,96 +1,131 @@
-import { clearElement, createEl } from "./components.js";
-import { campers } from "../data/campers.js";
+import { state } from "../engine/state.js";
+import { initEpisodeView } from "./episodeView.js";
+import { defaultPlayers } from "../data/defaultPlayers.js";
 
-export function initMenuUI(state) {
+export function initMenu() {
   const menuPage = document.getElementById("main-menu");
   const episodePage = document.getElementById("episode-view");
 
   const searchInput = document.getElementById("search-input");
-  const campersListEl = document.getElementById("campers-list");
-  const currentCastEl = document.getElementById("current-cast");
-  const currentCastCountEl = document.getElementById("current-cast-count");
+  const campersList = document.getElementById("campers-list");
+  const currentCastGrid = document.getElementById("current-cast-grid");
   const simulateBtn = document.getElementById("simulate-btn");
 
-  const premiereSelect = document.getElementById("premiere-format");
-  const returningSelect = document.getElementById("returning-format");
-  const seasonSelect = document.getElementById("season-format");
-  const finaleSelect = document.getElementById("finale-format");
+  // -----------------------------
+  // RENDER DEFAULT PLAYER LIST
+  // -----------------------------
+  function renderPlayerList(filter = "") {
+    campersList.innerHTML = "";
 
-  function updateConfigFromUI() {
-    state.config.premiereFormat = premiereSelect.value;
-    state.config.returningFormat = returningSelect.value;
-    state.config.seasonFormat = seasonSelect.value;
-    state.config.finaleFormat = finaleSelect.value;
-  }
+    const filtered = defaultPlayers.filter(p =>
+      p.name.toLowerCase().includes(filter.toLowerCase())
+    );
 
-  function renderCampersList() {
-    const query = searchInput.value.toLowerCase();
-    clearElement(campersListEl);
+    filtered.forEach(player => {
+      const item = document.createElement("div");
+      item.className = "campers-list-item";
 
-    campers
-      .filter((c) => c.name.toLowerCase().includes(query))
-      .forEach((camper) => {
-        const row = createEl("div", "campers-list-item");
-        const nameSpan = createEl("span", null, camper.name);
-        const addBtn = createEl("button", "secondary", "+");
+      const name = document.createElement("span");
+      name.textContent = player.name;
 
-        addBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          addToCast(camper);
-        });
+      const addBtn = document.createElement("button");
+      addBtn.textContent = "+";
+      addBtn.className = "secondary";
+      addBtn.onclick = () => addToCast(player);
 
-        row.appendChild(nameSpan);
-        row.appendChild(addBtn);
-        campersListEl.appendChild(row);
-      });
-  }
-
-  function addToCast(camper) {
-    if (state.currentCast.find((c) => c.id === camper.id)) return;
-    state.currentCast.push({ ...camper });
-    renderCurrentCast();
-  }
-
-  function removeFromCast(camperId) {
-    const idx = state.currentCast.findIndex((c) => c.id === camperId);
-    if (idx >= 0) {
-      state.currentCast.splice(idx, 1);
-      renderCurrentCast();
-    }
-  }
-
-  function renderCurrentCast() {
-    clearElement(currentCastEl);
-    currentCastCountEl.textContent = state.currentCast.length.toString();
-
-    state.currentCast.forEach((camper) => {
-      const card = createEl("div", "cast-card");
-      const name = createEl("div", "cast-card-name", camper.name);
-      const remove = createEl("div", "cast-card-remove", "Remove");
-
-      remove.addEventListener("click", () => removeFromCast(camper.id));
-
-      card.appendChild(name);
-      card.appendChild(remove);
-      currentCastEl.appendChild(card);
+      item.appendChild(name);
+      item.appendChild(addBtn);
+      campersList.appendChild(item);
     });
   }
 
-  searchInput.addEventListener("input", renderCampersList);
+  // -----------------------------
+  // ADD PLAYER TO CAST
+  // -----------------------------
+  function addToCast(player) {
+    if (state.currentCast.find(c => c.id === player.id)) return;
 
+    state.currentCast.push({
+      ...player
+    });
+
+    renderCurrentCast();
+  }
+
+  // -----------------------------
+  // REMOVE PLAYER FROM CAST
+  // -----------------------------
+  function removeFromCast(id) {
+    state.currentCast = state.currentCast.filter(c => c.id !== id);
+    renderCurrentCast();
+  }
+
+  // -----------------------------
+  // RENDER CURRENT CAST GRID
+  // -----------------------------
+  function renderCurrentCast() {
+    currentCastGrid.innerHTML = "";
+
+    state.currentCast.forEach(player => {
+      const card = document.createElement("div");
+      card.className = "cast-card";
+
+      const name = document.createElement("div");
+      name.className = "cast-card-name";
+      name.textContent = player.name;
+
+      const remove = document.createElement("div");
+      remove.className = "cast-card-remove";
+      remove.textContent = "Remove";
+      remove.onclick = () => removeFromCast(player.id);
+
+      card.appendChild(name);
+      card.appendChild(remove);
+      currentCastGrid.appendChild(card);
+    });
+  }
+
+  // -----------------------------
+  // RESET STATE FOR NEW SIMULATION
+  // -----------------------------
+  function resetSimulationState() {
+    state.trackRecord = {};
+    state.eliminated = [];
+    state.episodeNumber = 1;
+    state.phase = "intro";
+    state.lastChallengeResult = null;
+    state.lastEvents = [];
+    state.lastElimination = null;
+  }
+
+  // -----------------------------
+  // START SIMULATION
+  // -----------------------------
   simulateBtn.addEventListener("click", () => {
-    updateConfigFromUI();
     if (state.currentCast.length < 2) {
-      alert("Add at least 2 campers to start a season.");
+      alert("You need at least 2 contestants to start the simulation.");
       return;
     }
+
+    resetSimulationState();
+
     menuPage.classList.remove("active");
     episodePage.classList.add("active");
-    // episode view will render based on state
-    document.dispatchEvent(new CustomEvent("episode:start"));
+
+    document.dispatchEvent(new Event("episode:start"));
   });
 
-  // initial render
-  renderCampersList();
+  // -----------------------------
+  // SEARCH BAR
+  // -----------------------------
+  searchInput.addEventListener("input", e => {
+    renderPlayerList(e.target.value);
+  });
+
+  // INITIAL RENDER
+  renderPlayerList();
   renderCurrentCast();
+
+  // Initialize episode view
+  initEpisodeView(state);
 }
