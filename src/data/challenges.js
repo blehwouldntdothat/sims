@@ -11,6 +11,7 @@ export const challenges = [
     id: "obstacle-course",
     name: "Camp Obstacle Course",
     type: "physical",
+    description: "Race through mud pits, walls, ropes, and hazards to reach the finish line first.",
     phase: challengePhases.NORMAL,
     weights: {
       strength: 0.3,
@@ -26,6 +27,7 @@ export const challenges = [
     id: "puzzle-tower",
     name: "Puzzle Tower",
     type: "mental",
+    description: "Climb a tower by solving brain teasers and unlocking each new level.",
     phase: challengePhases.NORMAL,
     weights: {
       intelligence: 0.6,
@@ -41,6 +43,7 @@ export const challenges = [
     id: "musical-showdown",
     name: "Musical Showdown",
     type: "musical",
+    description: "Put on a wild performance with singing, rhythm, and stage presence.",
     phase: challengePhases.NORMAL,
     weights: {
       skill: 0.4,
@@ -57,6 +60,7 @@ export const challenges = [
     id: "fire-making-tiebreaker",
     name: "Fire-Making Tiebreaker",
     type: "tiebreaker",
+    description: "Build and light a fire before your opponent in a high-pressure duel.",
     phase: challengePhases.TIEBREAKER,
     weights: {
       skill: 0.4,
@@ -71,6 +75,7 @@ export const challenges = [
     id: "rejoin-gauntlet",
     name: "Rejoin Gauntlet",
     type: "rejoin",
+    description: "Defeated players battle through a brutal course for a second chance.",
     phase: challengePhases.REJOIN,
     weights: {
       stamina: 0.4,
@@ -85,6 +90,7 @@ export const challenges = [
     id: "finale-showdown",
     name: "Finale Showdown",
     type: "finale",
+    description: "The ultimate all-around challenge testing every skill one last time.",
     phase: challengePhases.FINALE,
     weights: {
       strength: 0.2,
@@ -102,6 +108,7 @@ export const challenges = [
     id: "sudden-death-duel",
     name: "Sudden Death Duel",
     type: "sudden-death",
+    description: "A fast and ruthless one-on-one clash where only one survives.",
     phase: challengePhases.SUDDEN_DEATH,
     weights: {
       strength: 0.3,
