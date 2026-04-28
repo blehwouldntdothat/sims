@@ -27,6 +27,7 @@ export function createInitialState() {
       returningFormat: "none",
       seasonFormat: "regular",
       finaleFormat: "top2",
+      finaleEnabled: false, // Toggle for finale challenge
     },
     lastChallengeResult: null,
     lastEvents: [],
@@ -36,4 +37,3 @@ export function createInitialState() {
 
 // ⭐ ADD THIS — the missing export
 export const state = createInitialState();
-
